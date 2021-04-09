@@ -291,42 +291,27 @@ function merge(defaults, defines) {
 exports.merge = merge;
 
 function buildCoreExports(folder) {
-  var dir = fs.readdirSync(folder)
+  return fs.readdirSync(folder)
+    .reduce(function(arr, item) {
+      const file = path.join(process.cwd(), folder, item)
+      const stat = fs.lstatSync(file)
 
-  return dir.reduce(function(arr, item) {
+      if (path.extname(item) === '.js' && stat.isFile()) {
+        const mod = require('module')._load(file)
+        const mods = Object.keys(mod)
+        const exp = mods.join(', ').replace(/'/g, '');
 
-    var ldir = path.join(process.cwd(), folder, item)
-    var stat = fs.lstatSync(ldir)
+        if (mods.length > 1) {
+          arr.imports.push(`import { ${ exp } } from './core/${ item }';`)
 
-    var addFile = function(file) {
-      var mod = require('module')._load(ldir)
-      var mods = Object.keys(mod)
-      var exp = mods.join(', ').replace(/'/g, '');
-      var id = path.basename(item, '.js');
-
-      var name = id.split('_').map(function(w) {
-        return w[0].toUpperCase() + w.substr(1).toLowerCase();
-      }).join('');
-
-      if (mods.length === 1) {
-        var ex = mods[0].replace(/'/g, '')
-        arr.imports.push(`import { ${ ex } } from './core/${ item }';`)
-        arr.exports.push(ex)
-      } else if (mods.length > 1) {
-        arr.imports.push(`import { ${ exp } } from './core/${ item }';`)
-
-        mods.forEach(function(mod) {
-          arr.exports.push(mod.replace(/'/g, ''))
-        })
+          mods.forEach(function(mod) {
+            arr.exports.push(mod.replace(/'/g, ''))
+          })
+        }
       }
-    }
 
-    if (path.extname(item) === ('.js') && stat.isFile()) {
-      addFile(ldir)
-    }
-
-    return arr
-  }, { imports: [], exports: [] })
+      return arr
+    }, { imports: [], exports: [] })
 }
 
 exports.buildCoreExports = buildCoreExports;

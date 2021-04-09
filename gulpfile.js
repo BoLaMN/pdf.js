@@ -987,41 +987,6 @@ gulp.task(
   })
 );
 
-gulp.task(
-  "core",
-  gulp.series("buildnumber", function () {
-    console.log();
-    console.log("### Creating core");
-    const defines = builder.merge(DEFINES, {
-      GENERIC: true,
-      LIB: true,
-      CORE: true,
-    });
-
-    return createCoreBundle(defines).pipe(
-      gulp.dest(CORE_DIR)
-    );
-  })
-);
-
-gulp.task(
-  "core-legacy",
-  gulp.series("buildnumber", function () {
-    console.log();
-    console.log("### Creating (legacy) core");
-    const defines = builder.merge(DEFINES, {
-      GENERIC: true,
-      LIB: true,
-      CORE: true,
-      SKIP_BABEL: false,
-    });
-
-    return createCoreBundle(defines).pipe(
-      gulp.dest(CORE_LEGACY_DIR)
-    );
-  })
-);
-
 function buildMinified(defines, dir) {
   rimraf.sync(dir);
 
@@ -1589,6 +1554,41 @@ gulp.task(
       ]);
     }
   )
+);
+
+gulp.task(
+  "core",
+  gulp.series("buildnumber", "lib", function () {
+    console.log();
+    console.log("### Creating core");
+    const defines = builder.merge(DEFINES, {
+      GENERIC: true,
+      LIB: true,
+      CORE: true,
+    });
+
+    return createCoreBundle(defines).pipe(
+      gulp.dest(CORE_DIR)
+    );
+  })
+);
+
+gulp.task(
+  "core-legacy",
+  gulp.series("buildnumber", "lib-legacy", function () {
+    console.log();
+    console.log("### Creating (legacy) core");
+    const defines = builder.merge(DEFINES, {
+      GENERIC: true,
+      LIB: true,
+      CORE: true,
+      SKIP_BABEL: false,
+    });
+
+    return createCoreBundle(defines).pipe(
+      gulp.dest(CORE_LEGACY_DIR)
+    );
+  })
 );
 
 function compressPublish(targetName, dir) {
