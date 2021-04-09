@@ -12,5 +12,14 @@ module.exports = {
     path: path.join(__dirname, "../../build/webpack"),
     publicPath: "../../build/webpack/",
     filename: "[name].bundle.js",
+    environment: {
+      arrowFunction: false,
+      bigIntLiteral: false,
+      const: false,
+      destructuring: false,
+      dynamicImport: false,
+      forOf: false,
+      module: false,
+    },
   },
 };

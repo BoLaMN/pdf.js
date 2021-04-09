@@ -53,6 +53,8 @@ const COMPONENTS_DIR = BUILD_DIR + "components/";
 const COMPONENTS_LEGACY_DIR = BUILD_DIR + "components-legacy/";
 const IMAGE_DECODERS_DIR = BUILD_DIR + "image_decoders/";
 const IMAGE_DECODERS_LEGACY_DIR = BUILD_DIR + "image_decoders-legacy/";
+const CORE_DIR = BUILD_DIR + "core/";
+const CORE_LEGACY_DIR = BUILD_DIR + "core-legacy/";
 const DEFAULT_PREFERENCES_DIR = BUILD_DIR + "default_preferences/";
 const MINIFIED_DIR = BUILD_DIR + "minified/";
 const MINIFIED_LEGACY_DIR = BUILD_DIR + "minified-legacy/";
@@ -236,6 +238,15 @@ function createWebpackConfig(
 
   // Required to expose e.g., the `window` object.
   output.globalObject = "this";
+  output.environment = {
+    arrowFunction: false,
+    bigIntLiteral: false,
+    const: false,
+    destructuring: false,
+    dynamicImport: false,
+    forOf: false,
+    module: false,
+  }
 
   return {
     mode: "none",
@@ -499,6 +510,28 @@ function createImageDecodersBundle(defines) {
     .pipe(webpack2Stream(componentsFileConfig))
     .pipe(replaceWebpackRequire())
     .pipe(replaceJSRootName(imageDecodersAMDName, "pdfjsImageDecoders"));
+}
+
+function createCoreBundle(defines) {
+  var mods = builder.buildCoreExports(LIB_DIR + "core/")
+  var coreFileData = `// DO NOT MODIFY, AUTO GENERATED\n\n${ mods.imports.join('\n') }\n\nexport { ${ mods.exports.sort().join(', ') } }`
+
+  fs.writeFileSync(SRC_DIR + '/pdf.core.js', coreFileData)
+
+  const coreAMDName = "pdfjs-dist/core/pdf.core";
+  const coreOutputName = "pdf.core.js";
+
+  const componentsFileConfig = createWebpackConfig(defines, {
+    filename: coreOutputName,
+    library: coreAMDName,
+    libraryTarget: "umd",
+    umdNamedDefine: true,
+  });
+  return gulp
+    .src("./src/pdf.core.js")
+    .pipe(webpack2Stream(componentsFileConfig))
+    .pipe(replaceWebpackRequire())
+    .pipe(replaceJSRootName(coreAMDName, "pdfjsCore"));
 }
 
 function checkFile(filePath) {
@@ -950,6 +983,41 @@ gulp.task(
 
     return createImageDecodersBundle(defines).pipe(
       gulp.dest(IMAGE_DECODERS_LEGACY_DIR)
+    );
+  })
+);
+
+gulp.task(
+  "core",
+  gulp.series("buildnumber", function () {
+    console.log();
+    console.log("### Creating core");
+    const defines = builder.merge(DEFINES, {
+      GENERIC: true,
+      LIB: true,
+      CORE: true,
+    });
+
+    return createCoreBundle(defines).pipe(
+      gulp.dest(CORE_DIR)
+    );
+  })
+);
+
+gulp.task(
+  "core-legacy",
+  gulp.series("buildnumber", function () {
+    console.log();
+    console.log("### Creating (legacy) core");
+    const defines = builder.merge(DEFINES, {
+      GENERIC: true,
+      LIB: true,
+      CORE: true,
+      SKIP_BABEL: false,
+    });
+
+    return createCoreBundle(defines).pipe(
+      gulp.dest(CORE_LEGACY_DIR)
     );
   })
 );
@@ -2052,6 +2120,8 @@ gulp.task(
     "image_decoders",
     "image_decoders-legacy",
     "lib",
+    "core",
+    "core-legacy",
     "minified",
     "minified-legacy",
     "types",
@@ -2143,6 +2213,7 @@ gulp.task(
         gulp
           .src(LIB_DIR + "**/*", { base: LIB_DIR })
           .pipe(gulp.dest(DIST_DIR + "lib/")),
+
         gulp
           .src(TYPES_DIR + "**/*", { base: TYPES_DIR })
           .pipe(gulp.dest(DIST_DIR + "types/")),

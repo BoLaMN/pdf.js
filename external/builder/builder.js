@@ -289,3 +289,44 @@ function merge(defaults, defines) {
   return ret;
 }
 exports.merge = merge;
+
+function buildCoreExports(folder) {
+  var dir = fs.readdirSync(folder)
+
+  return dir.reduce(function(arr, item) {
+
+    var ldir = path.join(process.cwd(), folder, item)
+    var stat = fs.lstatSync(ldir)
+
+    var addFile = function(file) {
+      var mod = require('module')._load(ldir)
+      var mods = Object.keys(mod)
+      var exp = mods.join(', ').replace(/'/g, '');
+      var id = path.basename(item, '.js');
+
+      var name = id.split('_').map(function(w) {
+        return w[0].toUpperCase() + w.substr(1).toLowerCase();
+      }).join('');
+
+      if (mods.length === 1) {
+        var ex = mods[0].replace(/'/g, '')
+        arr.imports.push(`import { ${ ex } } from './core/${ item }';`)
+        arr.exports.push(ex)
+      } else if (mods.length > 1) {
+        arr.imports.push(`import { ${ exp } } from './core/${ item }';`)
+
+        mods.forEach(function(mod) {
+          arr.exports.push(mod.replace(/'/g, ''))
+        })
+      }
+    }
+
+    if (path.extname(item) === ('.js') && stat.isFile()) {
+      addFile(ldir)
+    }
+
+    return arr
+  }, { imports: [], exports: [] })
+}
+
+exports.buildCoreExports = buildCoreExports;
